@@ -28,7 +28,6 @@ This wallet contains the basic functions required to mvanage your Plenteum asset
   * Allow to optionally create password protected address book.
 * Misc:
   * Option to use system tray (on closing/minimizing wallet)
-  * Provides list of public nodes, fetch/updated daily from [turtlecoin-nodes-json](https://github.com/turtlecoin/turtlecoin-nodes-json) repo.
   * Allow to add custom node address.
   * Theme: Dark & Light Mode
   * [Keyboard shortcuts](docs/shortcut.md)
@@ -95,6 +94,6 @@ $ npm run dist-mac
 Resulting packages or installer can be found inside `dist/` directory.
 
 ### Porting for another coin
-Please see [this guide](docs/porting.md) if you want to adapt PlenteumWallet to be use for your own Plenteum fork.
+Please see [this guide](docs/porting.md) if you want to adapt PlenteumWallet to be used for your own Plenteum fork.
 
 ![PlenteumWallet](docs/plenteumwallet.png)
