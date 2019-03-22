@@ -1,6 +1,6 @@
 ## PlenteumWallet - GUI wallet for Plenteum.
 
-![PlenteumWallet Screens](https://i.imgur.com/41Ujq0S.gif "PlenteumWallet Screens")
+![PlenteumWallet Screens](https://user-images.githubusercontent.com/5268997/54806537-f4ead180-4c82-11e9-9806-7923153301fc.png "PlenteumWallet Screens")
 
 ### Features:
 
