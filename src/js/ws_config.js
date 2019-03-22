@@ -3,7 +3,7 @@ var config = {};
 // self explanatory, your application name, descriptions, etc
 config.appName = 'PlenteumWallet';
 config.appDescription = 'Plenteum Wallet';
-config.appSlogan = 'Slow and steady wins the race!';
+config.appSlogan = 'Transaction Fees, Eat our Dust!';
 config.appId = 'com.plenteum.walletelectron';
 config.appGitRepo = 'https://github.com/plenteum/plenteum-wallet-electron';
 
@@ -17,7 +17,7 @@ config.walletFileDefaultExt = 'ple';
 config.walletServiceBinaryFilename = 'wallet-service';
 
 // version on the bundled service (wallet-service)
-config.walletServiceBinaryVersion = "v0.4.0";
+config.walletServiceBinaryVersion = "v0.3.0";
 
 // config file format supported by wallet service, possible values:
 // ini -->  for turtle service (or its forks) version <= v0.8.3
@@ -28,7 +28,7 @@ config.walletServiceConfigFormat = "json";
 config.walletServiceRpcPort = 8070;
 
 // block explorer url, the [[TX_HASH]] will be substituted w/ actual transaction hash
-config.blockExplorerUrl = 'http://block-explorer.plenteum.com/transaction.html?hash=[[TX_HASH]]';
+config.blockExplorerUrl = 'http://block-explorer.plenteum.com/?hash=[[TX_HASH]]#blockchain_transaction';
 
 // default remote node to connect to, set this to a known reliable node for 'just works' user experience
 config.remoteNodeDefaultHost = 'two.public.plenteum.com';
@@ -52,14 +52,14 @@ config.addressPrefix = 'PLe';
 // standard wallet address length, for address validation
 config.addressLength = 98;
 // intergrated wallet address length, for address validation
-config.integratedAddressLength = 186;
+config.integratedAddressLength = config.addressLength + ((64 * 11) / 8);
 
 // minimum fee for sending transaction
 config.minimumFee = 0;
 // minimum amount for sending transaction
 config.mininumSend = 0.1;
 // default mixin/anonimity for transaction
-config.defaultMixin = 3;
+config.defaultMixin = 0;
 // to convert from atomic unit
 config.decimalDivisor = 100000000;
 // to represent human readable value
