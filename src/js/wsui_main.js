@@ -1956,7 +1956,7 @@ function handleSendTransfer() {
         if (maxsend) sendInputAmount.value = maxsend;
     });
 
-    sendInputFee.value = 0.1;
+    sendInputFee.value = 0;
     function setPaymentIdState(addr) {
         if (addr.length > 99) {
             sendInputPaymentId.value = '';
@@ -2037,7 +2037,7 @@ function handleSendTransfer() {
         }
 
         total += fee;
-        let txFee = wsutil.amountForImmortal(fee);
+        let txFee = fee > 0 ? wsutil.amountForImmortal(fee) : 0;
 
         let nodeFee = wsession.get('nodeFee') || 0; // nodeFee value is already for mortal
         total += nodeFee;
@@ -2108,26 +2108,28 @@ function handleSendTransfer() {
                 // save to address book if it's new address
                 let entryHash = wsutil.fnvhash(recipientAddress + paymentId);
                 let abook = wsession.get('addressBook');
-                let addressBookData = abook.data;
-                if (!addressBookData.hasOwnProperty(entryHash)) {
-                    let now = new Date().toISOString().split('T');
-                    let newAddress = {
-                        name: `NEW (${now[0]} ${now[1].split('.')[0]})`,
-                        address: recipientAddress,
-                        paymentId: paymentId,
-                        qrCode: wsutil.genQrDataUrl(recipientAddress)
-                    };
-                    abook.data[entryHash] = newAddress;
-                    wsession.set('addressBook', abook);
-                    let rowData = Object.entries(abook.data).map(([key, value]) => ({ key, value }));
-                    window.ABOPTSAPI.api.setRowData(rowData);
-                    window.ABOPTSAPI.api.deselectAll();
-                    window.ABOPTSAPI.api.resetQuickFilter();
-                    window.ABOPTSAPI.api.sizeColumnsToFit();
-                    setTimeout(() => {
-                        addressBook.save(abook);
-                        initAddressCompletion(abook.data);
-                    }, 500);
+                if (abook !== null && abook.data !== null) {
+                    let addressBookData = abook.data;
+                    if (!addressBookData.hasOwnProperty(entryHash)) {
+                        let now = new Date().toISOString().split('T');
+                        let newAddress = {
+                            name: `NEW (${now[0]} ${now[1].split('.')[0]})`,
+                            address: recipientAddress,
+                            paymentId: paymentId,
+                            qrCode: wsutil.genQrDataUrl(recipientAddress)
+                        };
+                        abook.data[entryHash] = newAddress;
+                        wsession.set('addressBook', abook);
+                        let rowData = Object.entries(abook.data).map(([key, value]) => ({ key, value }));
+                        window.ABOPTSAPI.api.setRowData(rowData);
+                        window.ABOPTSAPI.api.deselectAll();
+                        window.ABOPTSAPI.api.resetQuickFilter();
+                        window.ABOPTSAPI.api.sizeColumnsToFit();
+                        setTimeout(() => {
+                            addressBook.save(abook);
+                            initAddressCompletion(abook.data);
+                        }, 500);
+                    }
                 }
 
                 sendInputAddress.value = '';
