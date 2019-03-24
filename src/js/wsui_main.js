@@ -2947,7 +2947,7 @@ ipcRenderer.on('cleanup', () => {
     win.focus();
 
     var dialog = document.getElementById('main-dialog');
-    let htmlText = 'Terminating PlenteumWallet...';
+    let htmlText = 'Terminating Plenteum Wallet...';
     if (wsession.get('loadedWalletAddress') !== '') {
         htmlText = 'Saving &amp; closing your wallet...';
     }
