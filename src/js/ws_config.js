@@ -74,8 +74,8 @@ config.addressBookObfuscationKey = '79009fb00ca1b7120832a42de45342cf6c4b7a331fe6
 config.addressBookSampleEntries = [
   {
     name: 'PlenteumWallet Donation',
-    address: '',
-        paymentId: 'PLearxtECBsKFLLeX3edPMEk4ncvZGkJQ7FpPyG3ADGtYbFj7FC5ELWXS2B7wRDfjwSqEwZVp7pwjbWCAhmGJp7z94TQzpNUkP',
+    address: 'PLearxtECBsKFLLeX3edPMEk4ncvZGkJQ7FpPyG3ADGtYbFj7FC5ELWXS2B7wRDfjwSqEwZVp7pwjbWCAhmGJp7z94TQzpNUkP',
+    paymentId: '',
   }
 ];
 // cipher config for private address book
