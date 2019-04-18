@@ -4,5 +4,6 @@ tbin/*
 .vscode/*
 build/*
 dist/*
-bin/*
-\.vs/plenteum-wallet-electron/v15/\.suo
+\.vs/**
+**/obj/**
+bin/

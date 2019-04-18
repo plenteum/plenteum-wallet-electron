@@ -9,9 +9,11 @@ const PlenteumWalletApi = require('./ws_api');
 const uiupdater = require('./wsui_updater');
 const wsutil = require('./ws_utils');
 const config = require('./ws_config');
+const syncStatus = require('./ws_constants').syncStatus;
+
 const { remote } = require('electron');
 const settings = new Store({ name: 'Settings' });
-const sessConfig = {debug: remote.app.debug, walletConfig: remote.app.walletConfig};
+const sessConfig = { debug: remote.app.debug, walletConfig: remote.app.walletConfig };
 const wsession = new PlenteumWalletSession(sessConfig);
 
 const SERVICE_LOG_DEBUG = wsession.get('debug');
@@ -41,6 +43,7 @@ var PlenteumWalletManager = function () {
     this.servicePassword = settings.get('service_password');
     this.serviceHost = settings.get('service_host');
     this.servicePort = settings.get('service_port');
+    this.serviceTimeout = settings.get('service_timeout');
     this.serviceArgsDefault = ['--rpc-password', settings.get('service_password')];
     this.walletConfigDefault = { 'rpc-password': settings.get('service_password') };
     this.servicePid = null;
@@ -175,19 +178,20 @@ PlenteumWalletManager.prototype.startService = function (walletFile, password, o
             log.debug(error.message);
             onError(`ERROR_WALLET_EXEC: ${error.message}`);
         } else {
-            log.debug(stdout);
+            //log.debug(stdout);
             if (stdout && stdout.length && stdout.indexOf(config.addressPrefix) !== -1) {
                 let trimmed = stdout.trim();
                 let walletAddress = trimmed.substring(trimmed.indexOf(config.addressPrefix), trimmed.length);
                 wsession.set('loadedWalletAddress', walletAddress);
-                wsm._spawnService(walletFile, password, onError, onSuccess, onDelay);
+                setTimeout(() => {
+                    wsm._spawnService(walletFile, password, onError, onSuccess, onDelay);
+                }, 500);
             } else {
                 // just stop here
                 onError(ERROR_WALLET_PASSWORD);
             }
         }
-    }
-    );
+    });
 };
 
 PlenteumWalletManager.prototype._argsToIni = function (args) {
@@ -208,6 +212,7 @@ PlenteumWalletManager.prototype._spawnService = function (walletFile, password, 
         `${file.split(' ').join('').split('.')[0]}.log`
     );
 
+    let timeout = settings.get('service_timeout');
     let serviceArgs = this.serviceArgsDefault.concat([
         '--container-file', walletFile,
         '--container-password', password,
@@ -217,6 +222,7 @@ PlenteumWalletManager.prototype._spawnService = function (walletFile, password, 
         '--log-level', SERVICE_LOG_LEVEL,
         '--log-file', logFile
     ]);
+    
 
     // fallback for network resume handler
     let cmdArgs = serviceArgs;
@@ -234,10 +240,10 @@ PlenteumWalletManager.prototype._spawnService = function (walletFile, password, 
             configFile = this._writeIniConfig(newConfig);
         }
         serviceArgs = ['--config', configFile];
+        log.debug('using config file');
     } else {
         log.warn('Failed to create config file, fallback to cmd args ');
     }
-
 
     let wsm = this;
     log.debug('Starting service...');
@@ -251,7 +257,6 @@ PlenteumWalletManager.prototype._spawnService = function (walletFile, password, 
         return false;
     }
 
-    
     this.serviceProcess.on('close', () => {
         this.terminateService(true);
         serviceDown = true;
@@ -267,11 +272,11 @@ PlenteumWalletManager.prototype._spawnService = function (walletFile, password, 
         // remove config when failed
         wsm._wipeConfig();
     });
-    
-    
+
+
     this.serviceProcess.on('exit', (code, signal) => {
         serviceDown = true;
-        log.debug(`turtle service exit with code: ${code}, signal: ${signal}`);
+        log.debug(`wallet-service exited with code: ${code}, signal: ${signal}`);
     });
 
     if (!this.serviceStatus()) {
@@ -283,7 +288,8 @@ PlenteumWalletManager.prototype._spawnService = function (walletFile, password, 
     }
 
     let TEST_OK = false;
-    let MAX_CHECK = 32;
+    let RETRY_MAX = (timeout > 60 ? 60 : 32);
+    log.debug(`timeout: ${timeout}, max retry: ${RETRY_MAX}`);
     function testConnection(retry) {
         wsm.serviceApi.getAddress().then((address) => {
             log.debug('Got an address, connection ok!');
@@ -318,7 +324,7 @@ PlenteumWalletManager.prototype._spawnService = function (walletFile, password, 
             log.debug('Connection failed or timeout');
             log.debug(err.message);
             if (!serviceDown && retry === 10 && onDelay) onDelay(`Still no response from ${config.walletServiceBinaryFilename}, please wait a few more seconds...`);
-            if (serviceDown || retry >= MAX_CHECK && !TEST_OK) {
+            if (serviceDown || retry >= RETRY_MAX && !TEST_OK) {
                 if (wsm.serviceStatus()) {
                     wsm.terminateService();
                 }
@@ -633,15 +639,14 @@ PlenteumWalletManager.prototype.rescanWallet = function (scanHeight) {
         wsession.set('txLastHash', null);
         wsession.set('txLastTimestamp', null);
         wsession.set('txNew', []);
-        let fakeBlock = -300;
         let resetdata = {
             type: 'blockUpdated',
             data: {
-                blockCount: fakeBlock,
-                displayBlockCount: fakeBlock,
-                knownBlockCount: fakeBlock,
-                displayKnownBlockCount: fakeBlock,
-                syncPercent: fakeBlock
+                blockCount: syncStatus.RESET,
+                displayBlockCount: syncStatus.RESET,
+                knownBlockCount: syncStatus.RESET,
+                displayKnownBlockCount: syncStatus.RESET,
+                syncPercent: syncStatus.RESET
             }
         };
         wsm.notifyUpdate(resetdata);
@@ -713,12 +718,12 @@ PlenteumWalletManager.prototype._fusionSendTx = function (threshold, counter) {
             }).catch((err) => {
                 if (typeof err === 'string') {
                     if (!err.toLocaleLowerCase().includes('index is out of range')) {
-                        console.log(err);
+                        log.debug(err);
                         return reject(new Error(err));
                     }
                 } else if (typeof err === 'object') {
                     if (!err.message.toLowerCase().includes('index is out of range')) {
-                        console.log(err);
+                        log.debug(err);
                         return reject(new Error(err));
                     }
                 }
@@ -785,7 +790,6 @@ PlenteumWalletManager.prototype.optimizeWallet = function () {
         }).catch((err) => {
             // todo handle this differently!
             log.debug('fusion error');
-            console.log(err);
             return reject((err.message));
         });
     });

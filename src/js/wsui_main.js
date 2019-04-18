@@ -12,6 +12,7 @@ const wsutil = require('./ws_utils');
 const PlenteumWalletSession = require('./ws_session');
 const PlenteumWalletManager = require('./ws_manager');
 const config = require('./ws_config');
+const syncStatus = require('./ws_constants').syncStatus;
 const async = require('async');
 const AgGrid = require('ag-grid-community');
 const wsmanager = new PlenteumWalletManager();
@@ -46,6 +47,7 @@ let settingsInputServiceBin;
 let settingsInputMinToTray;
 let settingsInputCloseToTray;
 let settingsInputExcludeOfflineNodes;
+let settingsInputTimeout;
 let settingsButtonSave;
 // overview page
 let overviewWalletAddress;
@@ -118,7 +120,6 @@ let thtml;
 let dmswitch;
 let kswitch;
 let iswitch;
-let pubnodes_fallbacks = [];
 
 function populateElementVars() {
     // misc
@@ -141,6 +142,7 @@ function populateElementVars() {
     settingsInputMinToTray = document.getElementById('checkbox-tray-minimize');
     settingsInputCloseToTray = document.getElementById('checkbox-tray-close');
     settingsInputExcludeOfflineNodes = document.getElementById('pubnodes-exclude-offline');
+    settingsInputTimeout = document.getElementById('input-settings-timeout');
     settingsButtonSave = document.getElementById('button-settings-save');
 
     // overview pages
@@ -220,14 +222,18 @@ let jtfr = {
         "https://github.com/plenteum/plenteum-wallet-electron",
         "Plenteum",
         "PLE",
-        "wallet-service"
+        "wallet-service",
+        "CFG_MIN_FEE",
+        "CFG_MIN_SEND"
     ],
     tReplace: [
         config.appName,
         config.appGitRepo,
         config.assetName,
         config.assetTicker,
-        config.walletServiceBinaryFilename
+        config.walletServiceBinaryFilename,
+        config.minimumFee,
+        config.mininumSend
     ]
 };
 
@@ -490,9 +496,19 @@ function initNodeSelection(nodeAddr) {
         offlines = testedNodes.filter((v) => v.label.indexOf(timeoutStr) >= 0);
     }
 
+    let pubnodes_fallbacks = config.remoteNodeListFallback;
     // shuffle nodes
     if (onlines.length) {
         let rndMethod = wsutil.arrShuffle([0, 1]);
+        if (pubnodes_fallbacks.length && config.remoteNodeListFiltered)  {
+            let fallbackMerge = [];
+            pubnodes_fallbacks.forEach(n => {
+                if(!onlines.find(x => x.host === n)) {
+                    fallbackMerge.push({ host: n, label: `${n}|FREE` });
+                }
+            });
+            onlines = onlines.concat(fallbackMerge);
+        }
         onlines = wsutil.arrShuffle(onlines, rndMethod);
     } else {
         if (pubnodes_fallbacks.length) {
@@ -591,6 +607,7 @@ function initSettingVal(values) {
         settings.set('node_address', values.node_address);
         settings.set('tray_minimize', values.tray_minimize);
         settings.set('tray_close', values.tray_close);
+        settings.set('service_timeout', values.service_timeout);
         settings.set('pubnodes_exclude_offline', values.pubnodes_exclude_offline);
     }
     settingsInputServiceBin.value = settings.get('service_bin');
@@ -666,6 +683,7 @@ function handleSettings() {
     settingsButtonSave.addEventListener('click', function () {
         formMessageReset();
         let serviceBinValue = settingsInputServiceBin.value ? settingsInputServiceBin.value.trim() : '';
+        let timeoutValue = settingsInputTimeout.value ? parseInt(settingsInputTimeout.value, 10) : 30;
 
         if (!serviceBinValue.length) {
             formMessageSet('settings', 'error', `Settings can't be saved, please enter correct values`);
@@ -677,9 +695,15 @@ function handleSettings() {
             return false;
         }
 
+        if (timeoutValue < 30 || timeoutValue > 120) {
+            formMessageSet('settings', 'error', `Timeout value must be between 30 and 120`);
+            return false;
+        }
+
         let vals = {
             service_bin: serviceBinValue,
             node_address: settings.get('node_address'),
+            service_timeout: timeoutValue,
             tray_minimize: settingsInputMinToTray.checked,
             tray_close: settingsInputCloseToTray.checked,
             pubnodes_exclude_offline: settingsInputExcludeOfflineNodes.checked
@@ -934,7 +958,7 @@ function handleAddressBook() {
 
     // disable payment id input for non standard adress
     function setAbPaymentIdState(addr) {
-        if (addr.length > 99) {
+        if (addr.length > config.addressLength) {
             addressBookInputPaymentId.value = '';
             addressBookInputPaymentId.setAttribute('disabled', true);
         } else {
@@ -1139,7 +1163,7 @@ function handleAddressBook() {
             }
         }
 
-        if (addressValue.length > 99) paymentIdValue.value = '';
+        if (addressValue.length > config.addressLength) paymentIdValue.value = '';
 
         let entryName = nameValue.trim();
         let entryAddr = addressValue.trim();
@@ -1289,7 +1313,7 @@ function handleAddressBook() {
 
         let currentAddressBook = wsession.get('addressBook');
         let abdata = [];
-        if (null === currentAddressBook) {
+        if (!currentAddressBook) {
             // new session, load from file
             try {
                 addressBook.load()
@@ -1496,6 +1520,7 @@ function handleWalletOpen() {
 
         let settingVals = {
             service_bin: settings.get('service_bin'),
+            service_timeout: settings.get('service_timeout'),
             node_address: nodeAddressValue,
             tray_minimize: settings.get('tray_minimize'),
             tray_close: settings.get('tray_close'),
@@ -1693,11 +1718,11 @@ function handleWalletClose() {
                 let resetdata = {
                     type: 'blockUpdated',
                     data: {
-                        blockCount: -100,
-                        displayBlockCount: -100,
-                        knownBlockCount: -100,
-                        displayKnownBlockCount: -100,
-                        syncPercent: -100
+                        blockCount: syncStatus.IDLE,
+                        displayBlockCount: syncStatus.IDLE,
+                        knownBlockCount: syncStatus.IDLE,
+                        displayKnownBlockCount: syncStatus.IDLE,
+                        syncPercent: syncStatus.IDLE
                     }
                 };
                 wsmanager.notifyUpdate(resetdata);
@@ -1956,9 +1981,9 @@ function handleSendTransfer() {
         if (maxsend) sendInputAmount.value = maxsend;
     });
 
-    sendInputFee.value = 0;
+    sendInputFee.value = config.minimumFee;
     function setPaymentIdState(addr) {
-        if (addr.length > 99) {
+        if (addr.length > config.addressLength) {
             sendInputPaymentId.value = '';
             sendInputPaymentId.setAttribute('disabled', true);
         } else {
@@ -2000,7 +2025,7 @@ function handleSendTransfer() {
         }
 
         let paymentId = sendInputPaymentId.value ? sendInputPaymentId.value.trim() : '';
-        if (recipientAddress.length > 99) {
+        if (recipientAddress.length > config.addressLength) {
             paymentId = '';
         } else if (paymentId.length) {
             if (!wsutil.validatePaymentId(paymentId)) {
@@ -2011,8 +2036,8 @@ function handleSendTransfer() {
 
         let total = 0;
         let amount = sendInputAmount.value ? parseFloat(sendInputAmount.value) : 0;
-        if (amount <= 0) {
-            formMessageSet('send', 'error', 'Sorry, invalid amount');
+        if (amount <= 0 || amount < config.mininumSend) {
+            formMessageSet('send', 'error', `Sorry, minimum amount you can send is ${config.mininumSend}`);
             return;
         }
 
@@ -2693,7 +2718,7 @@ function initHandlers() {
                 return;
             }
             // only allow standard address
-            if (addr.length > 99) {
+            if (addr.length > config.addressLength) {
                 formMessageSet('gia', 'error', `Only standard ${config.assetName} address are supported`);
                 return;
             }
@@ -2832,6 +2857,32 @@ function initKeyBindings() {
     });
 }
 
+function fetchFromRaw() {
+    if(!settings.has('pubnodes_raw')){
+        setTimeout(() => initNodeSelection, 100);
+        return;
+    }
+    
+    let nodeStr = atob(settings.get('pubnodes_raw', ""));
+    if(!nodeStr.length) return;
+    console.debug(nodeStr);
+    
+    let tested_nodes = [];
+    let nodes = JSON.parse(nodeStr);
+
+    for(const n of nodes) {
+        let feeLabel = parseInt(n.fee, 10) > 0 ? `Fee: ${wsutil.amountForMortal(n.fee)} ${config.assetTicker}` : "FREE";
+        tested_nodes.push({
+            host: `${n.url}:${n.port}`,
+            label: `${n.url}|${feeLabel}`
+        });
+    }
+    
+    settings.set('pubnodes_tested', tested_nodes);
+    initNodeSelection();
+    
+}
+
 function fetchNodeInfo(force) {
     force = force || false;
 
@@ -2933,10 +2984,14 @@ function fetchNodeInfo(force) {
 document.addEventListener('DOMContentLoaded', () => {
     initHandlers();
     showInitialPage();
-    if (navigator.onLine) {
-        fetchNodeInfo();
+    if (!config.remoteNodeListFiltered) {
+        if (navigator.onLine) {
+            fetchNodeInfo();
+        } else {
+            setTimeout(() => initNodeSelection, 500);
+        }
     } else {
-        setTimeout(() => initNodeSelection, 500);
+        fetchFromRaw();
     }
 }, false);
 

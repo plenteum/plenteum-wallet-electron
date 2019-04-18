@@ -2,7 +2,7 @@
   "name": "plenteumwallet",
   "productName": "PlenteumWallet",
   "description": "Plenteum GUI Wallet",
-  "version": "v0.3.0",
+  "version": "v0.4.0",
   "homepage": "https://github.com/plenteum/plenteum-wallet-electron",
   "repository": "https://github.com/plenteum/plenteum-wallet-electron",
   "main": "main.js",
@@ -19,9 +19,9 @@
   "license": "ISC",
   "devDependencies": {
     "devtron": "^1.4.0",
-    "electron": "^4.0.5",
-    "electron-builder": "^20.38.5",
-    "jshint": "^2.10.1"
+    "electron": "^4.1.4",
+    "electron-builder": "^20.40.2",
+    "jshint": "^2.10.2"
   },
   "dependencies": {
     "@trodi/electron-splashscreen": "^0.3.4",
