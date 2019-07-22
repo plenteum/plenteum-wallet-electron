@@ -256,6 +256,17 @@ function storeNodeList(pnodes) {
 
     let validNodes = [];
     pnodes.forEach(node => {
+        if(node.hasOwnProperty('cache')) {
+            if (!config.remoteNodeCacheSupported && true === node.cache) {
+                return;
+            }
+        }
+        if(node.hasOwnProperty('ssl')) {
+            if (!config.remoteNodeSslSupported && true === node.ssl) {
+                return;
+            }
+        }
+        
         let item = `${node.url}:${node.port}`;
         validNodes.push(item);
     });

@@ -1482,6 +1482,7 @@ function handleWalletOpen() {
             wsutil.showToast('Network connectivity problem detected, node list update can not be performed');
             return;
         }
+
         if (!confirm("Refreshing node list may take a while to complete, are you sure?")) return;
         fetchNodeInfo(true);
     });
@@ -2562,6 +2563,10 @@ function initHandlers() {
         };
 
         if (dialogType === 'saveFile') {
+            dialogOpts.defaultPath = path.join(
+                recentDir,
+                `new_wallet_${(new Date()).getTime()}.${config.walletFileDefaultExt}`
+            );
             dialogOpts.title = `Select directory to store your ${targetName}, and give it a filename.`;
             dialogOpts.buttonLabel = 'OK';
 
@@ -2991,6 +2996,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => initNodeSelection, 500);
         }
     } else {
+        walletOpenRefreshNodes.classList.add('hidden');
         fetchFromRaw();
     }
 }, false);
