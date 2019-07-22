@@ -28,7 +28,7 @@ config.walletServiceConfigFormat = "json";
 config.walletServiceRpcPort = 8070;
 
 // block explorer url, the [[TX_HASH]] will be substituted w/ actual transaction hash
-config.blockExplorerUrl = 'http://eblock-explorer.plenteum.com/?hash=[[TX_HASH]]#blockchain_transaction';
+config.blockExplorerUrl = 'http://block-explorer.plenteum.com/?hash=[[TX_HASH]]#blockchain_transaction';
 
 // default remote node to connect to, set this to a known reliable node for 'just works' user experience
 config.remoteNodeDefaultHost = 'two.public.plenteum.com';
@@ -43,8 +43,7 @@ config.remoteNodeListFiltered = false;
 // fallback remote node list, in case fetching update failed, fill this with known to works remote nodes
 config.remoteNodeListFallback = [
     'two.public.plenteum.com:44016',
-    'three.public.plenteum.com:44016',
-    'four.public.plenteum.com:44016',
+    'three.public.plenteum.com:44016'
 ];
 
 // your currency name
