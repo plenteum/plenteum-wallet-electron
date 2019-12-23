@@ -58,11 +58,11 @@ config.addressLength = 98;
 config.integratedAddressLength = config.addressLength + ((64 * 11) / 8);
 
 // minimum fee for sending transaction
-config.minimumFee = 0;
+config.minimumFee = 0.01;
 // minimum amount for sending transaction
 config.mininumSend = 0.1;
 // default mixin/anonimity for transaction
-config.defaultMixin = 0;
+config.defaultMixin = 3;
 // to represent human readable value
 config.decimalPlaces = 2;
 // to convert from atomic unit
