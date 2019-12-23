@@ -17,7 +17,7 @@ config.walletFileDefaultExt = 'ple';
 config.walletServiceBinaryFilename = 'wallet-service';
 
 // version of the bundled service (wallet-service)
-config.walletServiceBinaryVersion = "v0.4.5";
+config.walletServiceBinaryVersion = "v0.4.8";
 
 // config file format supported by wallet service, possible values:
 // ini -->  for wallet service (or its forks) version <= v0.8.3
